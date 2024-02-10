@@ -523,12 +523,6 @@ typedef enum {
     WMI_PDEV_ENABLE_LED_BLINK_DOWNLOAD_TABLE_CMDID,
     /** WMI Command to enable wifi radar */
     WMI_PDEV_ENABLE_WIFI_RADAR_CMDID,
-    /* WMI Command to enable xLNA */
-    WMI_PDEV_ENABLE_XLNA_CMDID,
-    /**
-     * WMI cmd to set custom TX power backoff value per band/chain/MCS to PHY.
-     */
-    WMI_PDEV_SET_CUSTOM_TX_POWER_PER_MCS_CMDID,
 
 
     /* VDEV (virtual device) specific commands */
@@ -4662,17 +4656,11 @@ typedef struct {
      *      WMI_RSRC_CFG_HOST_SERVICE_FLAG_RADAR_FLAGS_FULL_BW_NOL_GET
      *      and _SET macros.
      *  Bit 15
-     *      This bit will be set if the host has smem_mailbox support enabled.
+     *      This bit will be set if the host has qms_dlkm support enabled.
      *      Refer to the below definitions of the
-     *      WMI_RSRC_CFG_HOST_SERVICE_FLAG_SMEM_MAILBOX_SUPPORT_GET
+     *      WMI_RSRC_CFG_HOST_SERVICE_FLAG_QMS_DLKM_SUPPORT_GET
      *      and _SET macros.
-     *  Bit 16
-     *      ML FULL monitor mode
-     *      This bit will be set by host to enable ML_FULL_MONITOR_MODE
-     *      Refer to the below definitions of the
-     *      WMI_RSRC_CFG_HOST_SERVICE_FLAG_ML_FULL_MONITOR_MODE_SUPPORT_GET
-     *      and _SET macros
-     *  Bits 31:17 - Reserved
+     *  Bits 31:16 - Reserved
      */
     A_UINT32 host_service_flags;
 
@@ -5120,24 +5108,10 @@ typedef struct {
 #define WMI_RSRC_CFG_HOST_SERVICE_FLAG_RADAR_FLAGS_FULL_BW_NOL_SET(host_service_flags, val) \
     WMI_SET_BITS(host_service_flags, 14, 1, val)
 
-#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SMEM_MAILBOX_SUPPORT_GET(host_service_flags) \
+#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_QMS_DLKM_SUPPORT_GET(host_service_flags) \
     WMI_GET_BITS(host_service_flags, 15, 1)
-#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SMEM_MAILBOX_SUPPORT_SET(host_service_flags, val) \
+#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_QMS_DLKM_SUPPORT_SET(host_service_flags, val) \
     WMI_SET_BITS(host_service_flags, 15, 1, val)
-/*
- * Temporarily retain deprecated old "QMS_DLKM" macro names as aliases
- * for the new "SMEM_MAILBOX" macro names.
- */
-#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_QMS_DLKM_SUPPORT_GET(host_service_flags) /* DEPRECATED */ \
-    WMI_RSRC_CFG_HOST_SERVICE_FLAG_SMEM_MAILBOX_SUPPORT_GET(host_service_flags)
-#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_QMS_DLKM_SUPPORT_SET(host_service_flags, val) /* DEPRECATED */ \
-    WMI_RSRC_CFG_HOST_SERVICE_FLAG_SMEM_MAILBOX_SUPPORT_SET(host_service_flags, val)
-
-/* ML FULL monitor mode */
-#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_ML_FULL_MONITOR_MODE_SUPPORT_GET(host_service_flags) \
-        WMI_GET_BITS(host_service_flags, 16, 1)
-#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_ML_FULL_MONITOR_MODE_SUPPORT_SET(host_service_flags, val) \
-        WMI_SET_BITS(host_service_flags, 16, 1, val)
 
 
 #define WMI_RSRC_CFG_CARRIER_CFG_CHARTER_ENABLE_GET(carrier_config) \
@@ -37325,9 +37299,6 @@ static INLINE A_UINT8 *wmi_id_to_name(A_UINT32 wmi_command)
         WMI_RETURN_STRING(WMI_COEX_MULTIPLE_CONFIG_CMDID);
         WMI_RETURN_STRING(WMI_PDEV_ENABLE_LED_BLINK_DOWNLOAD_TABLE_CMDID);
         WMI_RETURN_STRING(WMI_PDEV_ENABLE_WIFI_RADAR_CMDID);
-        WMI_RETURN_STRING(WMI_VDEV_GET_TWT_SESSION_STATS_INFO_CMDID);
-        WMI_RETURN_STRING(WMI_PDEV_ENABLE_XLNA_CMDID);
-        WMI_RETURN_STRING(WMI_PDEV_SET_CUSTOM_TX_POWER_PER_MCS_CMDID);
     }
 
     return (A_UINT8 *) "Invalid WMI cmd";
@@ -44177,8 +44148,7 @@ enum wmi_oem_data_evt_cause {
     WMI_OEM_DATA_EVT_CAUSE_UNSPECIFIED = 0,
     WMI_OEM_DATA_EVT_CAUSE_CMD_REQ = 1,
     WMI_OEM_DATA_EVT_CAUSE_ASYNC = 2,
-    WMI_OEM_DATA_EVT_CAUSE_QMS = 3, /* DEPRECATED */
-    WMI_OEM_DATA_EVT_CAUSE_SMEM_MAILBOX = 3,
+    WMI_OEM_DATA_EVT_CAUSE_QMS = 3,
 };
 
 typedef struct {
@@ -47768,15 +47738,6 @@ typedef struct {
     A_UINT32 switch_type;  /* see definition of WMI_AUDIO_TRANSPORT_SWITCH_TYPE */
 } wmi_audio_transport_switch_resp_status_cmd_fixed_param;
 
-enum wmi_wifi_radar_cmd {
-    wmi_wifi_radar_capture_disable,
-    wmi_wifi_radar_capture_enable,
-    wmi_wifi_radar_rx_cal,
-    wmi_wifi_radar_tx_cal,
-
-    wmi_wifi_radar_cmd_max = 0xff
-};
-
 typedef struct {
     /** TLV tag and len; tag equals
      * WMITLV_TAG_STRUC_wmi_pdev_enable_wifi_radar_cmd_fixed_param
@@ -47805,30 +47766,12 @@ typedef struct {
      *     4 = 320 MHz
      */
     A_UINT32 bw;
-    /* enum wmi_wifi_radar_cmd */
+    /* 0 to stop capture, 1 to start periodic capture, 2 to do calibration */
     A_UINT32 capture_calibrate;
     /* periodicity of capture in milliseconds */
     A_UINT32 capture_interval_ms;
 } wmi_pdev_enable_wifi_radar_cmd_fixed_param;
 
-
-typedef struct {
-    /* WMITLV_TAG_STRUC_wmi_pdev_enable_xlna_cmd_fixed_param */
-    A_UINT32 tlv_header;
-    /* ID of pdev for which the xLNA needs to be configured */
-    A_UINT32 pdev_id;
-    /* 1 - Enable, 0 - Disable */
-    A_UINT32 xLNA_enable;
-} wmi_pdev_enable_xlna_cmd_fixed_param;
-
-typedef struct {
-    /* WMITLV_TAG_STRUC_wmi_pdev_enable_xlna_event_fixed_param */
-    A_UINT32 tlv_header;
-    /* to identify for which pdev the response is received */
-    A_UINT32 pdev_id;
-    /* Return status: 0 - Success, else - Failure */
-    A_UINT32 status;
-} wmi_pdev_enable_xlna_event_fixed_param;
 
 
 /* ADD NEW DEFS HERE */
