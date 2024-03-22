@@ -658,16 +658,6 @@ enum htt_dbg_ext_stats_type {
      */
     HTT_DBG_EXT_PDEV_RTT_INITIATOR_STATS = 66,
 
-    /** HTT_DBG_EXT_STATS_LATENCY_PROF_STATS_LO
-     *  PARAMS:
-     *
-     *  RESP MSG:
-     *    - htt_latency_prof_stats_tlv showing latency profile stats for
-     *      finer-grained events than HTT_DBG_EXT_STATS_LATENCY_PROF_STATS,
-     *      such as individual steps within a larger pdev or vdev event.
-     */
-    HTT_DBG_EXT_STATS_LATENCY_PROF_STATS_LO = 67,
-
 
     /* keep this last */
     HTT_DBG_NUM_EXT_STATS = 256,
