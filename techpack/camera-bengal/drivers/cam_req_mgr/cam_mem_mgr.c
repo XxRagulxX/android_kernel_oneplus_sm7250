@@ -178,8 +178,17 @@ static int32_t cam_mem_get_slot(void)
 	int32_t idx;
 
 	mutex_lock(&tbl.m_lock);
-	idx = find_first_zero_bit(tbl.bitmap, tbl.bits);
-	if (idx >= CAM_MEM_BUFQ_MAX || idx <= 0) {
+	if (tbl.bitmap) {
+		idx = find_first_zero_bit(tbl.bitmap, tbl.bits);
+		if (idx >= CAM_MEM_BUFQ_MAX || idx <= 0) {
+			mutex_unlock(&tbl.m_lock);
+			return -ENOMEM;
+		}
+
+		set_bit(idx, tbl.bitmap);
+		tbl.bufq[idx].active = true;
+		mutex_init(&tbl.bufq[idx].q_lock);
+		mutex_init(&tbl.bufq[idx].ref_lock);
 		mutex_unlock(&tbl.m_lock);
 		return -ENOMEM;
 	}
@@ -298,8 +307,7 @@ int cam_mem_get_cpu_buf(int32_t buf_handle, uintptr_t *vaddr_ptr, size_t *len)
 	}
 
 	mutex_lock(&tbl.bufq[idx].ref_lock);
-	if (tbl.bufq[idx].kmdvaddr &&
-		kref_get_unless_zero(&tbl.bufq[idx].krefcount)) {
+	if (tbl.bufq[idx].kmdvaddr && kref_get_unless_zero(&tbl.bufq[idx].krefcount)) {
 		*vaddr_ptr = tbl.bufq[idx].kmdvaddr;
 		*len = tbl.bufq[idx].len;
 	} else {
