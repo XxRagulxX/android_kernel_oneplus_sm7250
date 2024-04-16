@@ -6394,7 +6394,7 @@ static void perf_output_read_group(struct perf_output_handle *handle,
 	struct perf_event *leader = event->group_leader, *sub;
 	u64 read_format = event->attr.read_format;
 	unsigned long flags;
-	u64 values[6];
+	u64 values[5];
 	int n = 0;
 
 	/*
