@@ -1434,6 +1434,7 @@ int del_timer_sync(struct timer_list *timer)
 		if (unlikely(ret < 0)) {
 			del_timer_wait_running(timer);
 			cpu_relax();
+			ndelay(TIMER_LOCK_TIGHT_LOOP_DELAY_NS);
 		}
 	} while (ret < 0);
 
