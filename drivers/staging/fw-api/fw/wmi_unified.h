@@ -18562,6 +18562,10 @@ typedef enum {
     WMI_VDEV_PARAM_TELESDTIM_CNT,                         /* 0xC3 */
 
 
+    /* Update TWT_UNAVAIL_MODE */
+    WMI_VDEV_PARAM_TWT_UNAVAIL_MODE,                      /* 0xC6 */
+
+
     /*=== ADD NEW VDEV PARAM TYPES ABOVE THIS LINE ===
      * The below vdev param types are used for prototyping, and are
      * prone to change.
