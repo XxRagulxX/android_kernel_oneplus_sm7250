@@ -1428,6 +1428,19 @@ typedef enum {
     WMITLV_TAG_STRUC_wmi_dcs_obss_int_t,
     WMITLV_TAG_STRUC_wmi_pdev_wifi_radar_cal_completion_status_event_param,
     WMITLV_TAG_STRUC_wmi_sar_flags,
+    WMITLV_TAG_STRUC_wmi_pdev_enable_xlna_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_pdev_enable_xlna_event_fixed_param,
+    WMITLV_TAG_STRUC_wmi_reg_chan_list_cc_event_ext2_fixed_param,
+    WMITLV_TAG_STRUC_wmi_pdev_set_custom_tx_power_per_mcs_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_peer_active_traffic_map_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_request_opm_stats_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_ctrl_path_vdev_bcn_tx_stats_struct,
+    WMITLV_TAG_STRUC_wmi_ctrl_path_pdev_bcn_tx_stats_struct,
+    WMITLV_TAG_STRUC_wmi_soc_tx_packet_custom_classify_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_set_ap_suspend_resume_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_p2p_cli_dfs_ap_bmiss_fixed_param,
+    WMITLV_TAG_STRUC_wmi_p2p_go_dfs_ap_config_fixed_param,
+    WMITLV_TAG_STRUC_wmi_twt_vdev_config_cmd_fixed_param,
 } WMITLV_TAG_ID;
 /*
  * IMPORTANT: Please add _ALL_ WMI Commands Here.
@@ -1798,6 +1811,7 @@ typedef enum {
     OP(WMI_TWT_DEL_DIALOG_CMDID) \
     OP(WMI_TWT_PAUSE_DIALOG_CMDID) \
     OP(WMI_TWT_RESUME_DIALOG_CMDID) \
+    OP(WMI_TWT_VDEV_CONFIG_CMDID) \
     OP(WMI_REQUEST_ROAM_SCAN_STATS_CMDID) \
     OP(WMI_PEER_TID_CONFIGURATIONS_CMDID) \
     OP(WMI_VDEV_SET_CUSTOM_SW_RETRY_TH_CMDID) \
@@ -4900,6 +4914,11 @@ WMITLV_CREATE_PARAM_STRUC(WMI_TWT_ENABLE_CMDID);
 #define WMITLV_TABLE_WMI_TWT_DISABLE_CMDID(id,op,buf,len) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_twt_disable_cmd_fixed_param, wmi_twt_disable_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
 WMITLV_CREATE_PARAM_STRUC(WMI_TWT_DISABLE_CMDID);
+
+/* TWT config vdev cmd */
+#define WMITLV_TABLE_WMI_TWT_VDEV_CONFIG_CMDID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_twt_vdev_config_cmd_fixed_param, wmi_twt_vdev_config_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+WMITLV_CREATE_PARAM_STRUC(WMI_TWT_VDEV_CONFIG_CMDID);
 
 /* TWT add dialog cmd */
 #define WMITLV_TABLE_WMI_TWT_ADD_DIALOG_CMDID(id,op,buf,len) \
