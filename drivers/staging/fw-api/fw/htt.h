@@ -256,9 +256,15 @@
  * 3.128 Add H2T TX_LATENCY_STATS_CFG + T2H TX_LATENCY_STATS_PERIODIC_IND
  *       msg defs
  * 3.129 Add HTT_TX_FW2WBM_REINJECT_REASON_SAWF_SVC_CLASS_ID_ABSENT def.
+ * 3.130 Add H2T TX_LCE_SUPER_RULE_SETUP and T2H TX_LCE_SUPER_RULE_SETUP_DONE
+ *       msg defs.
+ * 3.131 Add H2T TYPE_MSDUQ_RECFG_REQ + T2H MSDUQ_CFG_IND msg defs.
+ * 3.132 Add flow_classification_3_tuple_field_enable in H2T 3_TUPLE_HASH_CFG.
+ * 3.133 Add packet_type_enable_data_flags fields in rx_ring_selection_cfg.
+ * 3.134 Add qdata_refill flag in rx_peer_metadata_v1a.
  */
 #define HTT_CURRENT_VERSION_MAJOR 3
-#define HTT_CURRENT_VERSION_MINOR 129
+#define HTT_CURRENT_VERSION_MINOR 134
 
 #define HTT_NUM_TX_FRAG_DESC  1024
 
@@ -20703,7 +20709,8 @@ PREPACK struct htt_rx_peer_metadata_v1a {
         vdev_id:         8,
         logical_link_id: 4,
         chip_id:         3,
-        reserved2:       3;
+        qdata_refill:    1,
+        reserved2:       2;
 } POSTPACK;
 
 #define HTT_RX_PEER_META_DATA_V1A_PEER_ID_S    0
@@ -20759,6 +20766,17 @@ PREPACK struct htt_rx_peer_metadata_v1a {
     do {                                             \
         HTT_CHECK_SET_VAL(HTT_RX_PEER_META_DATA_V1A_CHIP_ID, _val);  \
         ((_var) |= ((_val) << HTT_RX_PEER_META_DATA_V1A_CHIP_ID_S)); \
+    } while (0)
+
+#define HTT_RX_PEER_META_DATA_V1A_QDATA_REFILL_S    29
+#define HTT_RX_PEER_META_DATA_V1A_QDATA_REFILL_M    0x20000000
+#define HTT_RX_PEER_META_DATA_V1A_QDATA_REFILL_GET(_var) \
+    (((_var) & HTT_RX_PEER_META_DATA_V1A_QDATA_REFILL_M) >> HTT_RX_PEER_META_DATA_V1A_QDATA_REFILL_S)
+
+#define HTT_RX_PEER_META_DATA_V1A_QDATA_REFILL_SET(_var, _val) \
+    do {                                             \
+        HTT_CHECK_SET_VAL(HTT_RX_PEER_META_DATA_V1A_QDATA_REFILL, _val);  \
+        ((_var) |= ((_val) << HTT_RX_PEER_META_DATA_V1A_QDATA_REFILL_S)); \
     } while (0)
 
 
