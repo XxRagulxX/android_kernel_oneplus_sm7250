@@ -2015,6 +2015,9 @@ typedef enum {
     /** WMI event for Firmware Consumed/Dropped Rx management frames indication */
     WMI_MGMT_RX_FW_CONSUMED_EVENTID,
 
+    /** WMI event for indication to Host to reap the MGMT SRNG */
+    WMI_MGMT_SRNG_REAP_EVENTID,
+
 
     /* ADDBA Related WMI Events*/
     /** Indication the completion of the prior
@@ -4592,8 +4595,17 @@ typedef struct {
      *           and 255 indicates an invalid service class
      *      Refer to WMI_RSRC_CFG_FLAGS2_SAWF_255_SVC_CLASS_SUPPORT_GET/SET
      *      macros.
+     *  Bit 20 - enable feature EPM (Enhanced Power Management)
+     *      0 -> disable the feature
+     *      1 -> enable the feature
+     *      Refer to the below WMI_RSRC_CFG_FLAGS2_EPM_GET/SET macros.
+     *  Bit 21 - enable new MGMT SRNG for beacons and probe responses.
+     *      0 -> disable the feature
+     *      1 -> enable the feature
+     *      Refer to the below WMI_RSRC_CFG_FLAGS2_IS_MGMT_SRNG_ENABLED_GET/SET
+     *      macros.
      *
-     *  Bits 31:20 - Reserved
+     *  Bits 31:22 - Reserved
      */
     A_UINT32 flags2;
     /** @brief host_service_flags - can be used by Host to indicate
@@ -5081,6 +5093,12 @@ typedef struct {
     WMI_GET_BITS(flags2, 19, 1)
 #define WMI_RSRC_CFG_FLAGS2_SAWF_255_SVC_CLASS_SUPPORT_SET(flags2, value) \
     WMI_SET_BITS(flags2, 19, 1, value)
+
+
+#define WMI_RSRC_CFG_FLAGS2_IS_MGMT_SRNG_ENABLED_GET(flags2) \
+    WMI_GET_BITS(flags2, 21, 1)
+#define WMI_RSRC_CFG_FLAGS2_IS_MGMT_SRNG_ENABLED_SET(flags2, value) \
+    WMI_SET_BITS(flags2, 21, 1, value)
 
 
 #define WMI_RSRC_CFG_HOST_SERVICE_FLAG_NAN_IFACE_SUPPORT_GET(host_service_flags) \
@@ -9581,6 +9599,7 @@ typedef enum {
     /** configure datastall consecutive no ack threshold */
     WMI_PDEV_PARAM_DSTALL_CONSECUTIVE_TX_NO_ACK_THRESHOLD,
 
+    WMI_PDEV_PARAM_MGMT_SRNG_REAP_EVENT_THRESHOLD,
 } WMI_PDEV_PARAM;
 
 #define WMI_PDEV_ONLY_BSR_TRIG_IS_ENABLED(trig_type) WMI_GET_BITS(trig_type, 0, 1)
@@ -48141,6 +48160,96 @@ typedef struct {
      */
     A_UINT32 per_chain_cal_status[WMI_MAX_CHAINS];
 } wmi_pdev_wifi_radar_cal_completion_status_event_param;
+
+typedef struct {
+    /* WMITLV_TAG_STRUC_wmi_pdev_enable_xlna_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /* ID of pdev for which the xLNA needs to be configured */
+    A_UINT32 pdev_id;
+    /* 1 - Enable, 0 - Disable */
+    A_UINT32 xLNA_enable;
+} wmi_pdev_enable_xlna_cmd_fixed_param;
+
+typedef struct {
+    /* WMITLV_TAG_STRUC_wmi_pdev_enable_xlna_event_fixed_param */
+    A_UINT32 tlv_header;
+    /* to identify for which pdev the response is received */
+    A_UINT32 pdev_id;
+    /* Return status: 0 - Success, else - Failure */
+    A_UINT32 status;
+} wmi_pdev_enable_xlna_event_fixed_param;
+
+/**
+  * bits 0-15 are used for non interative traffic types like video streaming,
+  *     or ping
+  * bit 16-31 are reserved for interactive traffic types like gaming, VoIP,
+  *     or video conferencing
+  */
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_STREAMING_M  0x00000001
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_STREAMING_S  0
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_PING_M       0x00000002
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_PING_S       1
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_BACKGROUND_M 0x00000004
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_BACKGROUND_S 2
+/* bits 3-15 are reserved for new non-interactive traffic types */
+
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_GAMING_M     0x00010000
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_GAMING_S     16
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_VOIP_M       0x00020000
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_VOIP_S       17
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_VIDEO_CONF_M 0x00040000
+#define WMI_PEER_ACTIVE_TRAFFIC_TYPE_VIDEO_CONF_S 18
+/* bits 19-31 are reserved for new interactive traffic types */
+
+typedef struct {
+    A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_peer_active_traffic_map_cmd_fixed_param */
+    A_UINT32 vdev_id;
+    wmi_mac_addr peer_macaddr; /* peer MAC address */
+    /* active_traffic_map:
+     * This field is a bitmap showing traffic types known to be currently
+     * present within the vdev.
+     * Refer to the WMI_PEER_ACTIVE_TRAFFIC_ definitions that specify which
+     * bits within the bitmap correspond to which traffic types.
+     */
+    A_UINT32 active_traffic_map;
+} wmi_peer_active_traffic_map_cmd_fixed_param;
+
+
+/*
+ * WMI_REQUEST_OPM_STATS_CMDID triggered by host to collect OPM stats for trafic types identified by STC
+ * in respose this FW will send OEM_respose_event_id WMI_OEM_DATA_CMD_OPM_STATS
+ *
+ */
+ typedef struct {
+    A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_request_opm_stats_cmd_fixed_param */
+    A_UINT32 pdev_id; /** pdev_id for identifying the MAC */
+} wmi_request_opm_stats_cmd_fixed_param;
+
+/* wmi command to suspend SAP vdev */
+typedef struct {
+    /** TLV tag and len; tag equals
+     * WMITLV_TAG_STRUC_wmi_set_ap_suspend_resume_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /* VDEV identifier */
+    A_UINT32 vdev_id; /* If 0xFF, find vdevs corresponding to MLD MAC address */
+    wmi_mac_addr mld_mac_address; /* MLD MAC address */
+    A_UINT32 is_ap_suspend; /* 1 = suspend, 0 = resume */
+} wmi_set_ap_suspend_resume_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+     * WMITLV_TAG_STRUC_wmi_mgmt_srng_reap_event_fixed_param */
+    A_UINT32 tlv_header;
+    /** timestamp_tp_update_ms:
+     * This indicates the last time the tail pointer was updated by FW
+     * after filling MGMT SRNG entry.
+     * The timestamp is from the FW CPU's internal clock, in milliseconds units.
+     */
+    A_UINT32 timestamp_tp_update_ms;
+    /** This indicates the position of the tail pointer as last updated by FW */
+    A_UINT32 tail_pointer;
+} wmi_mgmt_srng_reap_event_fixed_param;
+
 
 
 /* ADD NEW DEFS HERE */
