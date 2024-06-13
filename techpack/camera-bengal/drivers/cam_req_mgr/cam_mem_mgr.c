@@ -188,7 +188,6 @@ static int32_t cam_mem_get_slot(void)
 		set_bit(idx, tbl.bitmap);
 		tbl.bufq[idx].active = true;
 		mutex_init(&tbl.bufq[idx].q_lock);
-		mutex_init(&tbl.bufq[idx].ref_lock);
 		mutex_unlock(&tbl.m_lock);
 		return -ENOMEM;
 	}
@@ -302,8 +301,7 @@ int cam_mem_get_cpu_buf(int32_t buf_handle, uintptr_t *vaddr_ptr, size_t *len)
 		return -EINVAL;
 	}
 
-	if (tbl.bufq[idx].kmdvaddr &&
-		kref_get_unless_zero(&tbl.bufq[idx].krefcount)) {
+	if (tbl.bufq[idx].kmdvaddr && kref_get_unless_zero(&tbl.bufq[idx].krefcount)) {
 		*vaddr_ptr = tbl.bufq[idx].kmdvaddr;
 		*len = tbl.bufq[idx].len;
 	} else {
@@ -1147,6 +1145,8 @@ void cam_mem_put_cpu_buf(int32_t buf_handle)
 			"Unbalanced release Called buf_handle: %u, idx: %d",
 			tbl.bufq[idx].buf_handle, idx);
 	}
+
+
 }
 EXPORT_SYMBOL(cam_mem_put_cpu_buf);
 
