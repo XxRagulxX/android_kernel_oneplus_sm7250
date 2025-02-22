@@ -604,24 +604,10 @@ static int __initdata do_skip_initramfs;
 
 static int __init skip_initramfs_param(char *str)
 {
-	ssize_t written;
-	struct file *file;
-	loff_t pos = 0;
-
-	unpack_to_rootfs(__initramfs_start, __initramfs_size);
-
-	printk(KERN_INFO "rootfs image is not initramfs (%s); looks like an initrd\n",
-			err);
-	file = filp_open("/initrd.image", O_WRONLY|O_CREAT|O_LARGEFILE, 0700);
-	if (IS_ERR(file))
-		return;
-
-	written = xwrite(file, (char *)initrd_start, initrd_end - initrd_start,
-			&pos);
-	if (written != initrd_end - initrd_start)
-		pr_err("/initrd.image: incomplete write (%zd != %ld)\n",
-		       written, initrd_end - initrd_start);
-	fput(file);
+	if (*str)
+		return 0;
+	do_skip_initramfs = 1;
+	return 1;
 }
 __setup("skip_initramfs", skip_initramfs_param);
 
