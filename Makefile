@@ -2,7 +2,7 @@
 VERSION = 4
 PATCHLEVEL = 19
 SUBLEVEL = 311
-EXTRAVERSION =
+EXTRAVERSION = -king-userbuild
 NAME = "People's Front"
 
 # *DOCUMENTATION*
