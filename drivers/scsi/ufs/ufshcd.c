@@ -6483,6 +6483,9 @@ static void ufshcd_slave_destroy(struct scsi_device *sdev)
 		spin_unlock_irqrestore(hba->host->host_lock, flags);
 	}
 
+	ufshcd_crypto_destroy_rq_keyslot_manager(hba, q);
+}
+
 /**
  * ufshcd_scsi_cmd_status - Update SCSI command result based on SCSI status
  * @lrbp: pointer to local reference block of completed command
