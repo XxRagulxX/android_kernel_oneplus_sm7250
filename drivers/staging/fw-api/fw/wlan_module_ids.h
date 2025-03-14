@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -195,6 +195,7 @@ typedef enum {
 
   WLAN_MODULE_ID_MAX,
   WLAN_MODULE_ID_INVALID = WLAN_MODULE_ID_MAX,
+  WLAN_MODULE_ID_ALL = 0xffff /* wildcard to indicate all modules */
 } WLAN_MODULE_ID;
 
 

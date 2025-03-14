@@ -254,7 +254,7 @@
  * 3.126 Add HTT_RXDATA_ERR_INVALID_PEER def.
  * 3.127 Add transmit_count fields in htt_tx_wbm_completion_vX structs.
  * 3.128 Add H2T TX_LATENCY_STATS_CFG + T2H TX_LATENCY_STATS_PERIODIC_IND
- *       msg defs
+ *       msg defs.
  * 3.129 Add HTT_TX_FW2WBM_REINJECT_REASON_SAWF_SVC_CLASS_ID_ABSENT def.
  * 3.130 Add H2T TX_LCE_SUPER_RULE_SETUP and T2H TX_LCE_SUPER_RULE_SETUP_DONE
  *       msg defs.
@@ -263,9 +263,10 @@
  * 3.133 Add packet_type_enable_data_flags fields in rx_ring_selection_cfg.
  * 3.134 Add qdata_refill flag in rx_peer_metadata_v1a.
  * 3.135 Add HTT_HOST4_TO_FW_RXBUF_RING def.
+ * 3.136 Add htt_ext_present flag in htt_tx_tcl_global_seq_metadata.
  */
 #define HTT_CURRENT_VERSION_MAJOR 3
-#define HTT_CURRENT_VERSION_MINOR 135
+#define HTT_CURRENT_VERSION_MINOR 136
 
 #define HTT_NUM_TX_FRAG_DESC  1024
 
@@ -828,7 +829,10 @@ typedef enum {
     HTT_STATS_PDEV_RTT_HW_STATS_TAG                 = 196, /* htt_stats_pdev_rtt_hw_stats_tlv */
     HTT_STATS_PDEV_RTT_TBR_SELFGEN_QUEUED_STATS_TAG = 197, /* htt_stats_pdev_rtt_tbr_selfgen_queued_stats_tlv */
     HTT_STATS_PDEV_RTT_TBR_CMD_RESULT_STATS_TAG     = 198, /* htt_stats_pdev_rtt_tbr_cmd_result_stats_tlv */
-
+    HTT_STATS_GTX_TAG                               = 199, /* htt_stats_gtx_tlv */
+    HTT_STATS_TX_PDEV_WIFI_RADAR_TAG                = 200, /* htt_stats_tx_pdev_wifi_radar_tlv */
+    HTT_STATS_TXBF_OFDMA_BE_PARBW_TAG               = 201, /* htt_stats_txbf_ofdma_be_parbw_tlv */
+    HTT_STATS_RX_PDEV_RSSI_HIST_TAG                 = 202, /* htt_stats_rx_pdev_rssi_hist_tlv */
 
     HTT_STATS_MAX_TAG,
 } htt_stats_tlv_tag_t;
@@ -2696,7 +2700,7 @@ typedef struct {
         type:           2, /* vdev_id based or peer_id or svc_id or global seq based */
         host_inspected: 1,
         global_seq_no: 12,
-        rsvd:           1,
+        htt_ext_present:1,
         padding:       16; /* These 16 bits cannot be used by FW for the tcl command */
 } htt_tx_tcl_global_seq_metadata;
 
@@ -2738,6 +2742,13 @@ PREPACK struct htt_tx_tcl_metadata_v2 {
 #define HTT_TX_TCL_METADATA_GLBL_SEQ_HOST_INSPECTED_S      2
 #define HTT_TX_TCL_METADATA_GLBL_SEQ_NO_M                  0x00007ff8
 #define HTT_TX_TCL_METADATA_GLBL_SEQ_NO_S                  3
+
+/* HTT ext present flag:
+ * Specify whether there is a htt ext desc present for this packet,
+ * accompanying the global seq no metadata.
+ */
+#define HTT_TX_TCL_METADATA_GLBL_SEQ_HTT_EXT_PRESENT_M     0x00008000
+#define HTT_TX_TCL_METADATA_GLBL_SEQ_HTT_EXT_PRESENT_S     15
 
 
 /*----- Get and Set V2 type field in Vdev, Peer, Svc_Class_Id, Global_seq_no */
@@ -2826,6 +2837,15 @@ PREPACK struct htt_tx_tcl_metadata_v2 {
          ((_var) |= ((_val) << HTT_TX_TCL_METADATA_GLBL_SEQ_NO_S)); \
      } while (0)
 
+#define HTT_TX_TCL_METADATA_GLBL_SEQ_HTT_EXT_PRESENT_GET(_var) \
+    (((_var) & HTT_TX_TCL_METADATA_GLBL_SEQ_HTT_EXT_PRESENT_M) >> \
+    HTT_TX_TCL_METADATA_GLBL_SEQ_HTT_EXT_PRESENT_S)
+#define HTT_TX_TCL_METADATA_GLBL_SEQ_HTT_EXT_PRESENT_SET(_var, _val) \
+     do { \
+         HTT_CHECK_SET_VAL(HTT_TX_TCL_METADATA_GLBL_SEQ_HTT_EXT_PRESENT, _val); \
+         ((_var) |= ((_val) << HTT_TX_TCL_METADATA_GLBL_SEQ_HTT_EXT_PRESENT_S)); \
+     } while (0)
+
 /*------------------------------------------------------------------
  *                 End V2 Version of TCL Data Command
  *-----------------------------------------------------------------*/
@@ -2853,6 +2873,7 @@ typedef enum {
    HTT_TX_FW2WBM_REINJECT_REASON_FLOW_CONTROL,
    HTT_TX_FW2WBM_REINJECT_REASON_MLO_MCAST,
    HTT_TX_FW2WBM_REINJECT_REASON_SAWF_SVC_CLASS_ID_ABSENT,
+   HTT_TX_FW2WBM_REINJECT_REASON_OPT_DP_CTRL, /* tx qdata packet */
 
    HTT_TX_FW2WBM_REINJECT_REASON_MAX,
 } htt_tx_fw2wbm_reinject_reason_t;
@@ -7291,33 +7312,35 @@ PREPACK struct htt_rx_ring_selection_cfg_t {
  *
  *    The message would appear as follows:
  *
- *    |31    26|25|24|23 22|21|20|19|18 16|15|14|13|12|11|10|9|8|7|6|5|4|3|2  0|
- *    |--------+--+--+-----+--+--+--+-----+--+--+--+--+--+--+-+-+-+-+-+-+-+----|
- *    | rsvd1  |PS|SS|       ring_id      |        pdev_id      |   msg_type   |
- *    |-----------+--------+--------+-----+------------------------------------|
- *    |   rsvd2   |  DATA  |  CTRL  | MGMT|            ring_buffer_size        |
- *    |--------------------------------------+--+--+--+--+--+-+-+-+-+-+-+-+----|
- *    |                                      | M| M| M| M| M|M|M|M|M|M|M|M|    |
- *    |                                      | S| S| S| P| P|P|S|S|S|P|P|P|    |
- *    |                                      | E| E| E| E| E|E|S|S|S|S|S|S|    |
- *    |                  rsvd3               | D| C| M| D| C|M|D|C|M|D|C|M|  E |
- *    |------------------------------------------------------------------------|
- *    |                            tlv_filter_mask_in0                         |
- *    |------------------------------------------------------------------------|
- *    |                            tlv_filter_mask_in1                         |
- *    |------------------------------------------------------------------------|
- *    |                            tlv_filter_mask_in2                         |
- *    |------------------------------------------------------------------------|
- *    |                            tlv_filter_mask_in3                         |
- *    |-----------------+-----------------+---------------------+--------------|
- *    | tx_msdu_start_wm| tx_queue_ext_wm |  tx_peer_entry_wm   |tx_fes_stup_wm|
- *    |------------------------------------------------------------------------|
- *    |                       pcu_ppdu_setup_word_mask                         |
- *    |--------------------+--+--+--+-----+---------------------+--------------|
- *    |       rsvd4        | D| C| M|  PT |   rxpcu_usrsetp_wm  |tx_mpdu_srt_wm|
- *    |------------------------------------------------------------------------|
+ * |31 28|27|26|25|24|23 22|21|20|19|18 16|15|14|13|12|11|10|9|8|7|6|5|4|3|2  0|
+ * |-----+--+--+--+--+-----+--+--+--+-----+--+--+--+--+--+--+-+-+-+-+-+-+-+----|
+ * |rsvd1|MF|TM|PS|SS|       ring_id      |        pdev_id      |   msg_type   |
+ * |--------------+--------+--------+-----+------------------------------------|
+ * |    rsvd2     |  DATA  |  CTRL  | MGMT|            ring_buffer_size        |
+ * |-----------------------------------------+--+--+--+--+--+-+-+-+-+-+-+-+----|
+ * |                                         | M| M| M| M| M|M|M|M|M|M|M|M|    |
+ * |                                         | S| S| S| P| P|P|S|S|S|P|P|P|    |
+ * |                                         | E| E| E| E| E|E|S|S|S|S|S|S|    |
+ * |                     rsvd3               | D| C| M| D| C|M|D|C|M|D|C|M|  E |
+ * |---------------------------------------------------------------------------|
+ * |                               tlv_filter_mask_in0                         |
+ * |---------------------------------------------------------------------------|
+ * |                               tlv_filter_mask_in1                         |
+ * |---------------------------------------------------------------------------|
+ * |                               tlv_filter_mask_in2                         |
+ * |---------------------------------------------------------------------------|
+ * |                               tlv_filter_mask_in3                         |
+ * |--------------------+-----------------+---------------------+--------------|
+ * |  tx_msdu_start_wm  | tx_queue_ext_wm |  tx_peer_entry_wm   |tx_fes_stup_wm|
+ * |---------------------------------------------------------------------------|
+ * |                          pcu_ppdu_setup_word_mask                         |
+ * |-----------------------+--+--+--+-----+---------------------+--------------|
+ * |         rsvd4         | D| C| M|  PT |   rxpcu_usrsetp_wm  |tx_mpdu_srt_wm|
+ * |---------------------------------------------------------------------------|
  *
  * Where:
+ *     MF = MAC address filtering enable
+ *     TM = tx monitor global enable
  *     PS = pkt_swap
  *     SS = status_swap
  * The message is interpreted as follows:
@@ -7336,7 +7359,9 @@ PREPACK struct htt_rx_ring_selection_cfg_t {
  *                    e.g. wmac_top_reg_seq_hwioreg.h
  *          b'26    - tx_mon_global_en: Enable/Disable global register
  *                    configuration in Tx monitor module.
- *          b'27:31 - rsvd1:  reserved for future use
+ *          b'27    - mac_addr_filter_en:
+ *                    Enable/Disable Mac Address based filter.
+ *          b'28:31 - rsvd1:  reserved for future use
  * dword1 - b'0:15  - ring_buffer_size: size of bufferes referenced by rx ring,
  *                    in byte units.
  *                    Valid only for HW_TO_SW_RING and SW_TO_HW_RING
@@ -7482,7 +7507,8 @@ PREPACK struct htt_tx_monitor_cfg_t {
              status_swap:                            1,
              pkt_swap:                               1,
              tx_mon_global_en:                       1,
-             rsvd1:                                  5;
+             mac_addr_filter_en:                     1,
+             rsvd1:                                  4;
     A_UINT32 ring_buffer_size:                      16,
              config_length_mgmt:                     3,
              config_length_ctrl:                     3,
@@ -7583,6 +7609,17 @@ PREPACK struct htt_tx_monitor_cfg_t {
             do { \
                 HTT_CHECK_SET_VAL(HTT_TX_MONITOR_CFG_TX_MON_GLOBAL_EN, _val); \
                 ((_var) |= ((_val) << HTT_TX_MONITOR_CFG_TX_MON_GLOBAL_EN_S)); \
+            } while (0)
+
+#define HTT_TX_MONITOR_CFG_MAC_ADDR_FILTER_EN_M         0x08000000
+#define HTT_TX_MONITOR_CFG_MAC_ADDR_FILTER_EN_S         27
+#define HTT_TX_MONITOR_CFG_MAC_ADDR_FILTER_EN_GET(_var) \
+            (((_var) & HTT_TX_MONITOR_CFG_MAC_ADDR_FILTER_EN_M) >> \
+                    HTT_TX_MONITOR_CFG_MAC_ADDR_FILTER_EN_S)
+#define HTT_TX_MONITOR_CFG_MAC_ADDR_FILTER_EN_SET(_var, _val) \
+            do { \
+                HTT_CHECK_SET_VAL(HTT_TX_MONITOR_CFG_MAC_ADDR_FILTER_EN, _val); \
+                ((_var) |= ((_val) << HTT_TX_MONITOR_CFG_MAC_ADDR_FILTER_EN_S)); \
             } while (0)
 
 #define HTT_TX_MONITOR_CFG_RING_BUFFER_SIZE_M           0x0000ffff
@@ -20890,6 +20927,9 @@ extern void (*HTT_RX_PEER_META_DATA_CHIP_ID_SET) (A_UINT32 *var, A_UINT32 val);
 extern A_UINT32 (*HTT_RX_PEER_META_DATA_HW_LINK_ID_GET) (A_UINT32 var);
 extern void (*HTT_RX_PEER_META_DATA_HW_LINK_ID_SET) (A_UINT32 *var, A_UINT32 val);
 
+extern A_UINT32 (*HTT_RX_PEER_META_DATA_QDATA_REFILL_GET) (A_UINT32 var);
+extern void (*HTT_RX_PEER_META_DATA_QDATA_REFILL_SET) (A_UINT32 *var, A_UINT32 val);
+
 
 /*
  * In some systems, the host SW wants to specify priorities between
@@ -21506,7 +21546,7 @@ PREPACK struct htt_t2h_sawf_msduq_event {
 #define HTT_T2H_SAWF_MSDUQ_INFO_HTT_TGT_OPAQUE_ID_M              0x00FFFFFF
 #define HTT_T2H_SAWF_MSDUQ_INFO_HTT_TGT_OPAQUE_ID_S                       0
 #define HTT_T2H_SAWF_MSDUQ_INFO_HTT_TGT_OPAQUE_ID_GET(_var) \
-    (((_var) & HTT_T2H_SAWF_MSDUQ_INFO_HTT_TGT_OPAQUE_ID) >> \
+    (((_var) & HTT_T2H_SAWF_MSDUQ_INFO_HTT_TGT_OPAQUE_ID_M) >> \
      HTT_T2H_SAWF_MSDUQ_INFO_HTT_TGT_OPAQUE_ID_S)
 #define HTT_T2H_SAWF_MSDUQ_INFO_HTT_TGT_OPAQUE_ID_SET(_var, _val) \
     do { \
@@ -23055,7 +23095,7 @@ typedef struct _htt_tx_latency_stats {
 
 /* HTT_T2H_MSG_TYPE_SDWF_MSDUQ_CFG_IND */
 typedef enum {
-    HTT_SDWF_MSDUQ_CFG_IND_ERROR_NONE = 0x00,
+    HTT_SDWF_MSDUQ_CFG_IND_ERROR_NONE                = 0x00,
     HTT_SDWF_MSDUQ_CFG_IND_ERROR_PEER_DELETE_IN_PROG = 0x01,
     HTT_SDWF_MSDUQ_CFG_IND_ERROR_SW_MSDUQ_NULL       = 0x02,
     HTT_SDWF_MSDUQ_CFG_IND_ERROR_MSDUQ_LOCATE_ERROR  = 0x03,
@@ -23120,7 +23160,7 @@ PREPACK struct htt_t2h_sdwf_msduq_cfg_ind {
 #define HTT_T2H_MSG_TYPE_SDWF_MSDUQ_CFG_IND_HLOS_TID_GET(_var) \
         (((_var) & HTT_T2H_MSG_TYPE_SDWF_MSDUQ_CFG_IND_HLOS_TID_M) >> \
                 HTT_T2H_MSG_TYPE_SDWF_MSDUQ_CFG_IND_HLOS_TID_S)
-#define HTT_T2H_MSG_TYPE_MSDUQ_CFG_IN_DHLOS_TID_SET(_var, _val) \
+#define HTT_T2H_MSG_TYPE_SDWF_MSDUQ_CFG_IND_HLOS_TID_SET(_var, _val) \
     do { \
         HTT_CHECK_SET_VAL(HTT_T2H_MSG_TYPE_SDWF_MSDUQ_CFG_IND_HLOS_TID, _val); \
         ((_var) |= ((_val) << HTT_T2H_MSG_TYPE_SDWF_MSDUQ_CFG_IND_HLOS_TID_S)); \
