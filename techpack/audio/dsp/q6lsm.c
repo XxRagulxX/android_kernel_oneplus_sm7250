@@ -2051,6 +2051,7 @@ static int q6lsm_mmapcallback(struct apr_client_data *data, void *priv)
 			data->payload_size);
 		return -EINVAL;
 	}
+	/*
 
 	The opcode for 4 bytes is 0x12A80
 	The opcode for 8 bytes is 0x110E8.
