@@ -1,0 +1,43 @@
+name: Kernel Compiler
+on:
+  workflow_dispatch:
+      inputs:
+         Buildtype:
+             description: 'Build Type'
+             required: true
+             default: 'RELEASE'
+         Changelog:
+             description: 'Build Changelog'
+             required: true
+             default: '* No Changelog provided by the developer'
+  
+env:
+  CHANGELOG: ${{ github.event.inputs.Changelog }}
+  BUILDTYPE: ${{ github.event.inputs.Buildtype }}
+
+jobs:
+  NSK_CI:
+    runs-on: ubuntu-22.04
+    steps:
+       - name: Install packages
+         run: |
+            sudo apt-get update
+            sudo apt-get -y install mkisofs git python2 bc cpio python3 python-is-python3 device-tree-compiler
+       - name: Clone NS Kernel Source & Clang-LLVM
+         run: |
+            cd ~
+            git clone https://github.com/sreeshankark/android_kernel_oneplus_avicii --recursive --depth=1 kernel
+            curl -sL https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz > ~/clang.tar.gz
+            mkdir ~/clang
+            tar -xvf ~/clang.tar.gz -C ~/clang
+            mkdir ~/kernel/clang-llvm
+            mv ~/clang/* ~/kernel/clang-llvm/
+            rm ~/clang.tar.gz
+            rm -rf ~/clang
+       - name: Build NS Kernel
+         run: |
+            cd ~/kernel
+            python build.py  
+       - name: Add Maintainer Name
+         run: |
+            echo "Maintainer: King"
