@@ -1288,9 +1288,8 @@ static irqreturn_t qcom_glink_native_intr(int irq, void *data)
 			ret = qcom_glink_rx_open_ack(glink, param1);
 			qcom_glink_rx_advance(glink, ALIGN(sizeof(msg), 8));
 			break;
-		case GLINK_CMD_OPEN:
-			/* upper 16 bits of param2 are the "prio" field */
-			ret = qcom_glink_rx_defer(glink, param2 & 0xffff);
+		case RPM_CMD_OPEN:
+			ret = qcom_glink_rx_defer(glink, param2);
 			break;
 		case RPM_CMD_TX_DATA:
 		case RPM_CMD_TX_DATA_CONT:
