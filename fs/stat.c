@@ -24,9 +24,6 @@
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
 
-#include "internal.h"
-#include "mount.h"
-
 #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 extern void susfs_sus_ino_for_generic_fillattr(unsigned long ino, struct kstat *stat);
 #endif
@@ -44,7 +41,7 @@ void generic_fillattr(struct inode *inode, struct kstat *stat)
 {
 #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 	if (likely(susfs_is_current_non_root_user_app_proc()) &&
-			unlikely(inode->i_state & INODE_STATE_SUS_KSTAT)) {
+			unlikely(inode->i_mapping->flags & BIT_SUS_KSTAT)) {
 		susfs_sus_ino_for_generic_fillattr(inode->i_ino, stat);
 		stat->mode = inode->i_mode;
 		stat->rdev = inode->i_rdev;
@@ -171,7 +168,7 @@ EXPORT_SYMBOL(vfs_statx_fd);
 
 #ifdef CONFIG_KSU
 extern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);
-#endif
+#endif /* CONFIG_KSU */
 
 /**
  * vfs_statx - Get basic and extra attributes by filename
@@ -194,13 +191,10 @@ int vfs_statx(int dfd, const char __user *filename, int flags,
 	struct path path;
 	int error = -EINVAL;
 	unsigned int lookup_flags = LOOKUP_FOLLOW | LOOKUP_AUTOMOUNT;
-    #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-	struct mount *mnt;
-    #endif
+
 	#ifdef CONFIG_KSU
 	ksu_handle_stat(&dfd, &filename, &flags);
-    #endif
-
+	#endif /* CONFIG_KSU */
 	if ((flags & ~(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT |
 		       AT_EMPTY_PATH | KSTAT_QUERY_FLAGS)) != 0)
 		return -EINVAL;
@@ -218,15 +212,7 @@ retry:
 		goto out;
 
 	error = vfs_getattr(&path, stat, request_mask, flags);
-#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-	mnt = real_mount(path.mnt);
-	if (likely(susfs_is_current_non_root_user_app_proc())) {
-		for (; mnt->mnt_id >= DEFAULT_SUS_MNT_ID; mnt = mnt->mnt_parent) {}
-	}
-	stat->mnt_id = mnt->mnt_id;
-#else
 	path_put(&path);
-#endif
 	if (retry_estale(error, lookup_flags)) {
 		lookup_flags |= LOOKUP_REVAL;
 		goto retry;
